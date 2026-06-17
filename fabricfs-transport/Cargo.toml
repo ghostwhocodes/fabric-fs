@@ -1,0 +1,19 @@
+[package]
+name = "fabricfs-transport"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true
+
+[dependencies]
+fs-core = { path = "../fs-core" }
+fs-protocol = { path = "../fs-protocol" }
+hex = "0.4"
+hmac = "0.12"
+fabricfs-observability = { path = "../fabricfs-observability" }
+nats = "0.25"
+nuid = "0.3.2"
+sha2 = "0.10"
+tracing = "0.1"
+
+[dev-dependencies]
+fs-testkit = { path = "../fs-testkit" }

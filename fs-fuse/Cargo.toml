@@ -1,0 +1,15 @@
+[package]
+name = "fs-fuse"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true
+
+[dependencies]
+fs-core = { path = "../fs-core" }
+fs-protocol = { path = "../fs-protocol" }
+fabricfs-observability = { path = "../fabricfs-observability" }
+thiserror = "1.0"
+tracing = "0.1"
+
+[dev-dependencies]
+fs-testkit = { path = "../fs-testkit" }

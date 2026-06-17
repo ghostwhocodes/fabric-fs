@@ -1,0 +1,12 @@
+[package]
+name = "fs-protocol"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true
+
+[dependencies]
+prost = "0.12"
+thiserror = "1.0"
+
+[build-dependencies]
+prost-build = "0.12"

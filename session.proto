@@ -1,0 +1,290 @@
+syntax = "proto3";
+
+package fabricfs.session.v1;
+
+// Session control protocol used by fabricfsctl and the server.
+// This is intentionally separate from the FUSE RPC protocol.
+
+// -------- Password primitives --------
+
+message SessionPassword {
+  // Plaintext password supplied by the client; never persisted.
+  string value = 1;
+}
+
+message PasswordStatus {
+  // True when a password is required for attach/mutate operations.
+  bool is_protected = 1;
+
+  // Hashing algorithm identifier, e.g. "argon2id".
+  // Empty when unprotected.
+  string algorithm = 2;
+}
+
+// Server-internal verifier material. This is never returned to clients.
+message PasswordRecord {
+  bool is_protected = 1;
+  string algorithm = 2;
+  bytes salt = 3;
+  bytes hash = 4;
+}
+
+// -------- Session metadata and overlay --------
+
+message SessionMetadata {
+  // Stable session identifier.
+  string session_id = 1;
+
+  // Human-facing display name.
+  string display_name = 2;
+
+  // Optional workspace grouping label.
+  string workspace_name = 3;
+
+  // Absolute path to the COW root backing this session.
+  string cow_root = 4;
+
+  // Password protection metadata (redacted, client-visible).
+  PasswordStatus password = 5;
+
+  // Creation / update timestamps (Unix nanos).
+  int64 created_at_unix_nanos = 6;
+  int64 updated_at_unix_nanos = 7;
+
+  // Monotonic overlay version for conflict detection.
+  int64 overlay_version = 8;
+}
+
+message OverlayOrigin {
+  string session_id = 1;
+  string checkpoint_id = 2;
+}
+
+message Alias {
+  // Logical path where the alias is visible.
+  string logical_path = 1;
+
+  // Logical target path.
+  string target_path = 2;
+
+  // Timestamp of creation (Unix nanos).
+  int64 created_at_unix_nanos = 3;
+
+  // Optional provenance.
+  OverlayOrigin origin = 4;
+}
+
+message Tombstone {
+  // Logical path that is masked by this tombstone.
+  string logical_path = 1;
+
+  // Timestamp of creation (Unix nanos).
+  int64 created_at_unix_nanos = 2;
+
+  // Optional provenance.
+  OverlayOrigin origin = 3;
+}
+
+message OverlayEntry {
+  string logical_path = 1;
+
+  oneof kind {
+    Alias alias = 2;
+    Tombstone tombstone = 3;
+  }
+}
+
+// Immutable snapshot captured for checkpoints.
+message SessionSnapshot {
+  SessionMetadata metadata = 1;
+  repeated OverlayEntry entries = 2;
+
+  // Monotonic overlay version recorded at checkpoint time.
+  int64 overlay_version = 3;
+}
+
+// -------- Checkpoints --------
+
+message CheckpointMetadata {
+  string checkpoint_id = 1;
+  string session_id = 2;
+  string label = 3;
+  int64 created_at_unix_nanos = 4;
+}
+
+message PublishedCheckpoint {
+  CheckpointMetadata checkpoint = 1;
+  SessionSnapshot snapshot = 2;
+}
+
+// -------- SessionControl RPCs --------
+
+message OperationStatus {
+  bool ok = 1;
+  string message = 2;
+}
+
+// Sessions
+message CreateSessionRequest {
+  string display_name = 1;
+  string workspace_name = 2;
+  string cow_root = 3;
+  SessionPassword password = 4;
+}
+
+message CreateSessionResponse {
+  OperationStatus status = 1;
+  SessionMetadata metadata = 2;
+}
+
+message ListSessionsRequest {}
+
+message ListSessionsResponse {
+  OperationStatus status = 1;
+  repeated SessionMetadata sessions = 2;
+}
+
+message GetSessionRequest {
+  string session_id = 1;
+  SessionPassword password = 2;
+}
+
+message GetSessionResponse {
+  OperationStatus status = 1;
+  SessionSnapshot snapshot = 2;
+}
+
+message DeleteSessionRequest {
+  string session_id = 1;
+  SessionPassword password = 2;
+}
+
+message DeleteSessionResponse {
+  OperationStatus status = 1;
+}
+
+// Attach / init
+message InitSessionRequest {
+  string session_id = 1;
+  SessionPassword password = 2;
+}
+
+message InitSessionResponse {
+  OperationStatus status = 1;
+  SessionMetadata metadata = 2;
+}
+
+// Overlay
+message UpdateOverlayRequest {
+  string session_id = 1;
+  SessionPassword password = 2;
+  repeated Alias add_aliases = 3;
+  repeated Tombstone add_tombstones = 4;
+  repeated string remove_alias_paths = 5;
+  repeated string remove_tombstone_paths = 6;
+}
+
+message UpdateOverlayResponse {
+  OperationStatus status = 1;
+}
+
+message ListOverlayEntriesRequest {
+  string session_id = 1;
+  SessionPassword password = 2;
+  string directory_prefix = 3;
+}
+
+message ListOverlayEntriesResponse {
+  OperationStatus status = 1;
+  repeated OverlayEntry entries = 2;
+}
+
+// Checkpoints (local)
+message CheckpointSessionRequest {
+  string session_id = 1;
+  SessionPassword password = 2;
+  string label = 3;
+}
+
+message CheckpointSessionResponse {
+  OperationStatus status = 1;
+  CheckpointMetadata checkpoint = 2;
+}
+
+message ListCheckpointsRequest {
+  string session_id = 1;
+  SessionPassword password = 2;
+}
+
+message ListCheckpointsResponse {
+  OperationStatus status = 1;
+  repeated CheckpointMetadata checkpoints = 2;
+}
+
+// Publishing via JetStream KV
+message PublishCheckpointRequest {
+  string session_id = 1;
+  string checkpoint_id = 2;
+  SessionPassword password = 3;
+  string remote_checkpoint_id = 4;
+}
+
+message PublishCheckpointResponse {
+  OperationStatus status = 1;
+  string remote_checkpoint_id = 2;
+}
+
+message ListPublishedCheckpointsRequest {}
+
+message ListPublishedCheckpointsResponse {
+  OperationStatus status = 1;
+  repeated PublishedCheckpoint checkpoints = 2;
+}
+
+// Importing from KV
+enum ImportMode {
+  IMPORT_MODE_REPLACE = 0;
+  IMPORT_MODE_MERGE = 1;
+}
+
+enum ConflictPolicy {
+  CONFLICT_POLICY_ERROR = 0;
+  CONFLICT_POLICY_KEEP_LOCAL = 1;
+  CONFLICT_POLICY_OVERWRITE_REMOTE = 2;
+}
+
+message ImportPublishedCheckpointRequest {
+  string remote_checkpoint_id = 1;
+  string target_session_id = 2;
+  string new_display_name = 3;
+  SessionPassword password = 4;
+  ImportMode mode = 5;
+  ConflictPolicy conflict_policy = 6;
+  int64 expected_overlay_version = 7;
+}
+
+message ImportPublishedCheckpointResponse {
+  OperationStatus status = 1;
+  SessionMetadata session = 2;
+}
+
+service SessionControl {
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
+  rpc DeleteSession(DeleteSessionRequest) returns (DeleteSessionResponse);
+
+  rpc InitSession(InitSessionRequest) returns (InitSessionResponse);
+
+  rpc UpdateOverlay(UpdateOverlayRequest) returns (UpdateOverlayResponse);
+  rpc ListOverlayEntries(ListOverlayEntriesRequest) returns (ListOverlayEntriesResponse);
+
+  rpc CheckpointSession(CheckpointSessionRequest) returns (CheckpointSessionResponse);
+  rpc ListCheckpoints(ListCheckpointsRequest) returns (ListCheckpointsResponse);
+
+  rpc PublishCheckpoint(PublishCheckpointRequest) returns (PublishCheckpointResponse);
+  rpc ListPublishedCheckpoints(ListPublishedCheckpointsRequest)
+      returns (ListPublishedCheckpointsResponse);
+  rpc ImportPublishedCheckpoint(ImportPublishedCheckpointRequest)
+      returns (ImportPublishedCheckpointResponse);
+}

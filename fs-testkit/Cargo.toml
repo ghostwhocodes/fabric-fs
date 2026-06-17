@@ -1,0 +1,9 @@
+[package]
+name = "fs-testkit"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true
+
+[dependencies]
+fs-core = { path = "../fs-core" }
+fs-protocol = { path = "../fs-protocol" }

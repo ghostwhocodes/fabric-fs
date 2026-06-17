@@ -1,0 +1,13 @@
+[package]
+name = "fs-transport-local"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true
+
+[dependencies]
+fs-core = { path = "../fs-core" }
+fs-protocol = { path = "../fs-protocol" }
+
+[dev-dependencies]
+fs-fuse = { path = "../fs-fuse" }
+fs-testkit = { path = "../fs-testkit" }

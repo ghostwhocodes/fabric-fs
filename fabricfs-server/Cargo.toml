@@ -1,0 +1,48 @@
+[package]
+name = "fabricfs-server"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true
+autobins = false
+
+[[bin]]
+name = "fabricfs-server"
+path = "src/main.rs"
+
+[[bin]]
+name = "fabricfsctl"
+path = "src/bin/fabricfsctl.rs"
+
+[[bin]]
+name = "fabricfs-sessiond"
+path = "src/bin/sessiond.rs"
+
+[features]
+default = []
+jetstream-tests = []
+
+[dependencies]
+argon2 = "0.5"
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive", "env"] }
+fs-core = { path = "../fs-core" }
+fs-protocol = { path = "../fs-protocol" }
+hex = "0.4"
+libc = "0.2"
+fabricfs-observability = { path = "../fabricfs-observability" }
+fabricfs-session-protocol = { path = "../fabricfs-session-protocol" }
+fabricfs-transport = { path = "../fabricfs-transport" }
+nats = "0.25"
+notify = { version = "6", default-features = false, features = ["macos_kqueue"] }
+prost = "0.12"
+rand = { workspace = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+strum = { version = "0.26", features = ["derive"] }
+tabled = "0.15"
+thiserror = "2.0"
+tracing = "0.1"
+uuid = { version = "1", features = ["v4", "v5"] }
+
+[dev-dependencies]
+tempfile = "3.10"

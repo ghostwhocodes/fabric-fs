@@ -1,0 +1,27 @@
+[workspace]
+members = [
+    "fs-protocol",
+    "fs-core",
+    "fs-testkit",
+    "fs-transport-local",
+    "fs-fuse",
+    "fabricfs-observability",
+    "fabricfs-session-protocol",
+    "fabricfs-fuse",
+    "fabricfs-server",
+    "fabricfs-transport",
+]
+resolver = "2"
+
+[workspace.package]
+license = "AGPL-3.0-only"
+
+[workspace.dependencies]
+rand = "0.8"
+
+[patch.crates-io]
+nuid = { path = "vendor/nuid" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

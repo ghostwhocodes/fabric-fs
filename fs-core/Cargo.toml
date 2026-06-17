@@ -1,0 +1,10 @@
+[package]
+name = "fs-core"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true
+
+[dependencies]
+fs-protocol = { path = "../fs-protocol" }
+thiserror = "1.0"
+tracing = "0.1"

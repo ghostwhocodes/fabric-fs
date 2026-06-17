@@ -1,0 +1,425 @@
+syntax = "proto3";
+
+package fs.protocol.v1;
+
+enum Operation {
+  OPERATION_UNSPECIFIED = 0;
+  OPERATION_LOOKUP = 1;
+  OPERATION_GETATTR = 2;
+  OPERATION_READDIR = 3;
+  OPERATION_OPEN = 4;
+  OPERATION_READ = 5;
+  OPERATION_WRITE = 6;
+  OPERATION_CREATE = 7;
+  OPERATION_RENAME = 8;
+  OPERATION_UNLINK = 9;
+  OPERATION_MKDIR = 10;
+  OPERATION_RMDIR = 11;
+  OPERATION_STATFS = 12;
+  OPERATION_GETXATTR = 13;
+  OPERATION_SETXATTR = 14;
+  OPERATION_LISTXATTR = 15;
+  OPERATION_REMOVEXATTR = 16;
+  OPERATION_RELEASE = 17;
+  OPERATION_READLINK = 18;
+  OPERATION_SYMLINK = 19;
+  OPERATION_HARDLINK = 20;
+  OPERATION_SETATTR = 21;
+  OPERATION_FLUSH = 22;
+  OPERATION_FSYNC = 23;
+  OPERATION_FSYNCDIR = 24;
+  OPERATION_GETLK = 25;
+  OPERATION_SETLK = 26;
+  OPERATION_FLOCK = 27;
+  OPERATION_COPY_FILE_RANGE = 28;
+  OPERATION_FALLOCATE = 29;
+  OPERATION_LSEEK = 30;
+}
+
+enum FileKind {
+  FILE_KIND_UNKNOWN = 0;
+  FILE_KIND_FILE = 1;
+  FILE_KIND_DIRECTORY = 2;
+  FILE_KIND_SYMLINK = 3;
+}
+
+enum OpenKind {
+  OPEN_KIND_UNSPECIFIED = 0;
+  OPEN_KIND_FILE = 1;
+  OPEN_KIND_DIRECTORY = 2;
+}
+
+enum InvalidationKind {
+  INVALIDATION_KIND_UNSPECIFIED = 0;
+  INVALIDATION_KIND_CREATE = 1;
+  INVALIDATION_KIND_MODIFY = 2;
+  INVALIDATION_KIND_DELETE = 3;
+  INVALIDATION_KIND_RENAME = 4;
+  INVALIDATION_KIND_METADATA = 5;
+  INVALIDATION_KIND_XATTR = 6;
+  INVALIDATION_KIND_FULL_RESYNC = 7;
+}
+
+message TraceEntry {
+  string key = 1;
+  string value = 2;
+}
+
+message TraceContext {
+  string trace_id = 1;
+  string parent_id = 2;
+  repeated TraceEntry entries = 3;
+}
+
+message Observation {
+  string key = 1;
+  string value = 2;
+}
+
+message CallerContext {
+  uint32 uid = 1;
+  uint32 gid = 2;
+  uint32 pid = 3;
+}
+
+message PathDto {
+  string path = 1;
+}
+
+message FileAttr {
+  uint64 inode = 1;
+  uint64 size = 2;
+  FileKind kind = 3;
+  uint32 perm = 4;
+  uint64 mtime_unix_nanos = 5;
+  uint32 uid = 6;
+  uint32 gid = 7;
+  uint32 nlink = 8;
+  uint64 atime_unix_nanos = 9;
+  uint64 ctime_unix_nanos = 10;
+  uint64 crtime_unix_nanos = 11;
+}
+
+message DirectoryEntry {
+  uint64 inode = 1;
+  string name = 2;
+  FileKind kind = 3;
+}
+
+message StatFs {
+  uint64 blocks = 1;
+  uint64 blocks_free = 2;
+  uint64 files = 3;
+  uint64 files_free = 4;
+  uint32 block_size = 5;
+  uint32 name_max = 6;
+  uint64 blocks_available = 7;
+  uint32 fragment_size = 8;
+}
+
+message RequestEnvelope {
+  uint32 protocol_version = 1;
+  string request_id = 2;
+  Operation operation = 3;
+  string namespace = 4;
+  uint64 deadline_unix_nanos = 5;
+  TraceContext trace = 6;
+  bytes payload = 7;
+  Operation payload_operation = 8;
+  repeated Observation observations = 9;
+  CallerContext caller = 10;
+}
+
+message ResponseEnvelope {
+  uint32 protocol_version = 1;
+  string request_id = 2;
+  Operation operation = 3;
+  string namespace = 4;
+  uint64 deadline_unix_nanos = 5;
+  TraceContext trace = 6;
+  bytes payload = 7;
+  bool ok = 8;
+  int32 errno = 9;
+  string error_message = 10;
+  repeated Observation observations = 11;
+  repeated Invalidation invalidations = 12;
+  Operation payload_operation = 13;
+}
+
+message Invalidation {
+  string namespace = 1;
+  uint64 sequence = 2;
+  InvalidationKind kind = 3;
+  string path = 4;
+  string old_path = 5;
+  string new_path = 6;
+  uint64 inode = 7;
+  uint64 handle = 8;
+  string request_id = 9;
+}
+
+message EmptyResponse {}
+
+message LookupRequest {
+  PathDto path = 1;
+}
+
+message LookupResponse {
+  FileAttr attr = 1;
+}
+
+message GetattrRequest {
+  PathDto path = 1;
+}
+
+message GetattrResponse {
+  FileAttr attr = 1;
+}
+
+message ReaddirRequest {
+  PathDto path = 1;
+  uint64 offset = 2;
+  uint32 max_entries = 3;
+}
+
+message ReaddirResponse {
+  repeated DirectoryEntry entries = 1;
+  bool end = 2;
+}
+
+message OpenRequest {
+  PathDto path = 1;
+  uint32 flags = 2;
+  OpenKind kind = 3;
+}
+
+message OpenResponse {
+  uint64 handle = 1;
+  uint32 flags = 2;
+}
+
+message ReadRequest {
+  PathDto path = 1;
+  uint64 handle = 2;
+  uint64 offset = 3;
+  uint32 size = 4;
+}
+
+message ReadResponse {
+  bytes data = 1;
+}
+
+message WriteRequest {
+  PathDto path = 1;
+  uint64 handle = 2;
+  uint64 offset = 3;
+  bytes data = 4;
+}
+
+message WriteResponse {
+  uint32 bytes_written = 1;
+}
+
+message CreateRequest {
+  PathDto path = 1;
+  uint32 flags = 2;
+  uint32 mode = 3;
+}
+
+message CreateResponse {
+  FileAttr attr = 1;
+  uint64 handle = 2;
+}
+
+message RenameRequest {
+  PathDto old_path = 1;
+  PathDto new_path = 2;
+}
+
+message UnlinkRequest {
+  PathDto path = 1;
+}
+
+message MkdirRequest {
+  PathDto path = 1;
+  uint32 mode = 2;
+}
+
+message RmdirRequest {
+  PathDto path = 1;
+}
+
+message StatfsRequest {
+  PathDto path = 1;
+}
+
+message StatfsResponse {
+  StatFs stat = 1;
+}
+
+message GetxattrRequest {
+  PathDto path = 1;
+  string name = 2;
+  uint32 size = 3;
+}
+
+message GetxattrResponse {
+  bytes value = 1;
+}
+
+message SetxattrRequest {
+  PathDto path = 1;
+  string name = 2;
+  bytes value = 3;
+  uint32 flags = 4;
+}
+
+message ListxattrRequest {
+  PathDto path = 1;
+  uint32 size = 2;
+}
+
+message ListxattrResponse {
+  repeated string names = 1;
+}
+
+message RemovexattrRequest {
+  PathDto path = 1;
+  string name = 2;
+}
+
+message ReleaseRequest {
+  PathDto path = 1;
+  uint64 handle = 2;
+  uint32 flags = 3;
+}
+
+message ReadlinkRequest {
+  PathDto path = 1;
+}
+
+message ReadlinkResponse {
+  bytes target = 1;
+}
+
+message SymlinkRequest {
+  PathDto path = 1;
+  bytes target = 2;
+}
+
+message SymlinkResponse {
+  FileAttr attr = 1;
+}
+
+message HardlinkRequest {
+  PathDto existing_path = 1;
+  PathDto new_path = 2;
+}
+
+message HardlinkResponse {
+  FileAttr attr = 1;
+}
+
+message SetattrRequest {
+  PathDto path = 1;
+  optional uint32 mode = 2;
+  optional uint32 uid = 3;
+  optional uint32 gid = 4;
+  optional uint64 size = 5;
+  optional uint64 handle = 6;
+}
+
+message SetattrResponse {
+  FileAttr attr = 1;
+}
+
+message FlushRequest {
+  PathDto path = 1;
+  uint64 handle = 2;
+  uint64 lock_owner = 3;
+}
+
+message FsyncRequest {
+  PathDto path = 1;
+  uint64 handle = 2;
+  bool datasync = 3;
+}
+
+message FsyncdirRequest {
+  PathDto path = 1;
+  uint64 handle = 2;
+  bool datasync = 3;
+}
+
+message FileLock {
+  uint64 start = 1;
+  uint64 end = 2;
+  int32 typ = 3;
+  uint32 pid = 4;
+}
+
+message GetlkRequest {
+  PathDto path = 1;
+  uint64 handle = 2;
+  uint64 owner = 3;
+  uint64 start = 4;
+  uint64 end = 5;
+  int32 typ = 6;
+  uint32 pid = 7;
+}
+
+message GetlkResponse {
+  FileLock lock = 1;
+}
+
+message SetlkRequest {
+  PathDto path = 1;
+  uint64 handle = 2;
+  uint64 owner = 3;
+  uint64 start = 4;
+  uint64 end = 5;
+  int32 typ = 6;
+  uint32 pid = 7;
+  bool wait = 8;
+}
+
+message FlockRequest {
+  PathDto path = 1;
+  uint64 handle = 2;
+  uint64 owner = 3;
+  int32 operation = 4;
+}
+
+message CopyFileRangeRequest {
+  PathDto input_path = 1;
+  uint64 input_handle = 2;
+  int64 input_offset = 3;
+  PathDto output_path = 4;
+  uint64 output_handle = 5;
+  int64 output_offset = 6;
+  uint64 length = 7;
+  uint32 flags = 8;
+}
+
+message CopyFileRangeResponse {
+  uint64 bytes_copied = 1;
+}
+
+message FallocateRequest {
+  PathDto path = 1;
+  uint64 handle = 2;
+  int64 offset = 3;
+  int64 length = 4;
+  int32 mode = 5;
+}
+
+message LseekRequest {
+  PathDto path = 1;
+  uint64 handle = 2;
+  int64 offset = 3;
+  int32 whence = 4;
+}
+
+message LseekResponse {
+  int64 offset = 1;
+}
