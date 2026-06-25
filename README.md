@@ -1,6 +1,14 @@
 FabricFs — FUSE over NATS
 =======================
 
+<p align="center">
+  <img src="./.github/assets/banner.webp" alt="FabricFs banner">
+</p>
+
+<p align="center">
+  <a href="https://ghost-who-codes.blog/open-source/fabric-fs/">Project page on Ghost Who Codes</a>
+</p>
+
 FabricFs is a NATS-backed filesystem: a FUSE3 bridge forwards the common mounted
 filesystem operation set to a NATS service that maintains a copy-on-write
 overlay on top of an optional backing tree. A companion session control service
